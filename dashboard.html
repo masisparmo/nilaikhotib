@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Monitor Penilaian Praktek Khotib - IKADI Kota Tangerang</title>
+  
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ikadi: {
+              darkest: '#090d16',
+              card: '#151f32',
+              emerald: '#10b981',
+              emeraldLight: '#34d399',
+              gold: '#f59e0b',
+              goldLight: '#fbbf24',
+              blue: '#3b82f6',
+            }
+          },
+          fontFamily: {
+            sans: ['Outfit', 'Inter', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Chart.js via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    /* Custom scrollbar untuk kolom komentar */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 8px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #151f32;
+      border-radius: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 6px;
+      border: 2px solid #151f32;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #10b981;
+    }
+
+    /* Efek denyut sinkronisasi */
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); opacity: 1; }
+      50% { transform: scale(1.3); opacity: 0.5; }
+      100% { transform: scale(0.95); opacity: 1; }
+    }
+    .pulse-indicator {
+      position: relative;
+    }
+    .pulse-indicator::after {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      background: inherit;
+      border-radius: 50%;
+      animation: pulse-ring 2s infinite ease-in-out;
+      z-index: -1;
+    }
+
+    /* Animasi Bar Chart masuk */
+    .chart-container {
+      position: relative;
+      height: 320px;
+      width: 100%;
+    }
+
+    /* Modal Detail Khotib */
+    #detailModal {
+      transition: opacity 0.25s ease, visibility 0.25s ease;
+    }
+    #detailModal.hidden-modal {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    #detailModal.visible-modal {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+    #detailModalPanel {
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    #detailModal.hidden-modal #detailModalPanel {
+      transform: scale(0.88) translateY(30px);
+    }
+    #detailModal.visible-modal #detailModalPanel {
+      transform: scale(1) translateY(0);
+    }
+
+    /* Star Rating Display */
+    .star-display {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+    }
+    .star-display .fa-star {
+      font-size: 14px;
+    }
+
+    /* Progress bar animation */
+    @keyframes grow-bar {
+      from { width: 0%; }
+      to { width: var(--target-width); }
+    }
+    .progress-bar-animate {
+      animation: grow-bar 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+  </style>
+</head>
+<body class="bg-ikadi-darkest text-slate-100 min-h-screen p-4 lg:p-6 font-sans flex flex-col justify-between selection:bg-emerald-500 selection:text-white">
+
+  <!-- Header Dashboard -->
+  <header class="flex flex-col lg:flex-row items-center justify-between gap-4 pb-6 border-b border-slate-800">
+    <div class="flex items-center space-x-4">
+      <!-- Logo IKADI -->
+      <div class="bg-white rounded-2xl p-1.5 shadow-lg shadow-emerald-900/20 shrink-0">
+        <img 
+          src="logo-ikadi.png" 
+          alt="Logo IKADI" 
+          class="h-12 w-auto object-contain"
+          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+        >
+        <div style="display:none;" class="w-12 h-12 bg-gradient-to-tr from-emerald-600 to-emerald-400 text-white rounded-xl items-center justify-center shadow-lg">
+          <i class="fa-solid fa-square-poll-vertical text-xl"></i>
+        </div>
+      </div>
+      <div>
+        <h1 class="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-400 via-amber-300 to-emerald-500 bg-clip-text text-transparent">
+          MONITOR LIVE PENILAIAN PRAKTEK KHOTIB
+        </h1>
+        <p class="text-xs sm:text-sm font-semibold text-slate-400 tracking-widest uppercase mt-0.5">
+          IKADI Kota Tangerang • Mode Layar Proyektor
+        </p>
+      </div>
+    </div>
+
+    <!-- Panel Sinkronisasi & Info -->
+    <div class="flex items-center space-x-4 bg-ikadi-card px-5 py-3 rounded-2xl border border-slate-800 shadow-inner shrink-0">
+      <div class="flex items-center space-x-2">
+        <div id="syncIndicatorDot" class="w-3.5 h-3.5 rounded-full bg-amber-500 pulse-indicator"></div>
+        <span id="syncIndicatorText" class="text-xs font-bold text-slate-300">Mode Demo (Lokal)</span>
+      </div>
+      <div class="h-6 w-px bg-slate-700"></div>
+      <div class="flex items-center space-x-2 text-xs font-bold text-slate-400">
+        <i class="fa-solid fa-arrows-rotate animate-spin text-emerald-500" id="refreshSpinner"></i>
+        <span>Update: <span id="timerCountdown">5s</span></span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Pilihan Khotib (Dropdown Utama) -->
+  <section class="my-5">
+    <div class="bg-ikadi-card p-4 rounded-2xl border border-slate-800/80 shadow-lg flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="flex items-center space-x-3 w-full md:w-auto">
+        <span class="text-base font-bold text-emerald-400 whitespace-nowrap">
+          <i class="fa-solid fa-circle-user mr-2"></i>Tampilkan Penilaian Khotib:
+        </span>
+      </div>
+      <div class="relative w-full md:w-2/3 lg:w-1/2">
+        <select 
+          id="selectKhotib" 
+          class="w-full bg-slate-900 border-2 border-slate-700 hover:border-emerald-500 text-white font-bold py-3.5 px-5 rounded-xl outline-none focus:ring-2 focus:ring-emerald-800 transition-all duration-200 cursor-pointer appearance-none text-base md:text-lg text-emerald-300"
+        >
+          <option value="" disabled selected>Memuat data khotib...</option>
+        </select>
+        <div class="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-emerald-400">
+          <i class="fa-solid fa-chevron-down text-lg"></i>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Konten Utama (Visualisasi & Kinerja) -->
+  <main class="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow mb-6">
+    
+    <!-- Bagian Kiri: Statistik Ringkasan & Chart.js (7 Kolom) -->
+    <div class="lg:col-span-7 flex flex-col justify-between gap-6">
+      
+      <!-- Kartu KPI Ringkasan -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        
+        <!-- KPI 1: Jumlah Penilai -->
+        <div class="bg-ikadi-card p-5 rounded-3xl border border-slate-800 flex items-center justify-between shadow-xl">
+          <div>
+            <span class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Penilai</span>
+            <span class="block text-3xl sm:text-4xl font-extrabold text-white mt-1" id="totalEvaluations">0</span>
+            <span class="text-xs text-slate-400 mt-1 block">Peserta memberikan suara</span>
+          </div>
+          <div class="w-14 h-14 bg-emerald-950/50 text-emerald-400 rounded-2xl flex items-center justify-center shadow-inner">
+            <i class="fa-solid fa-users text-2xl"></i>
+          </div>
+        </div>
+
+        <!-- KPI 2: Skor Rata-rata Gabungan -->
+        <div class="bg-ikadi-card p-5 rounded-3xl border border-slate-800 flex items-center justify-between shadow-xl">
+          <div>
+            <span class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Rata-Rata Nilai</span>
+            <div class="flex items-baseline space-x-2 mt-1">
+              <span class="text-3xl sm:text-4xl font-extrabold text-amber-400" id="averageScore">0.00</span>
+              <span class="text-sm font-bold text-slate-500">/ 5.00</span>
+            </div>
+            <span class="text-xs text-slate-400 mt-1 block" id="ratingLabel">Belum Ada Penilaian</span>
+          </div>
+          <div class="w-14 h-14 bg-amber-950/50 text-amber-400 rounded-2xl flex items-center justify-center shadow-inner">
+            <i class="fa-solid fa-star text-2xl"></i>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Wadah Visualisasi Chart.js -->
+      <div class="bg-ikadi-card p-6 rounded-3xl border border-slate-800 shadow-xl flex-grow flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-base font-bold text-slate-200">
+            <i class="fa-solid fa-chart-simple mr-2 text-emerald-400"></i>Perbandingan Dimensi Penilaian
+          </h3>
+          <span class="text-xs font-medium text-slate-400">Skala Maksimum 5.0</span>
+        </div>
+        <div class="chart-container">
+          <canvas id="ratingChart"></canvas>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Bagian Kanan: 5 Besar Khotib Terbaik & Umpan Balik (5 Kolom) -->
+    <div class="lg:col-span-5 flex flex-col gap-6">
+      
+      <!-- Card: 5 Besar Khotib Terbaik -->
+      <div class="bg-ikadi-card p-6 rounded-3xl border border-slate-800 shadow-xl flex flex-col">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+          <h3 class="text-base font-bold text-slate-200">
+            <i class="fa-solid fa-trophy mr-2 text-amber-500"></i>5 Besar Khotib Terbaik
+          </h3>
+          <span class="text-xs font-semibold text-slate-400">Klik untuk detail</span>
+        </div>
+        <!-- List: Top 5 -->
+        <div id="topKhotibContainer" class="flex-grow space-y-2.5">
+          <!-- Diisi via JavaScript -->
+        </div>
+      </div>
+
+      <!-- Card: Dinding Komentar -->
+      <div class="bg-ikadi-card p-6 rounded-3xl border border-slate-800 shadow-xl flex-grow flex flex-col" style="max-height: 340px;">
+        <div class="flex items-center justify-between pb-4 border-b border-slate-800 mb-4">
+          <h3 class="text-base font-bold text-slate-200">
+            <i class="fa-solid fa-comments mr-2 text-emerald-400"></i>Umpan Balik & Masukan
+          </h3>
+          <span class="px-2 py-0.5 bg-slate-800 text-slate-400 rounded-md text-xs font-bold" id="commentsCount">0</span>
+        </div>
+
+        <!-- Scrollable Comments Wall -->
+        <div id="commentsContainer" class="flex-grow overflow-y-auto pr-1 space-y-3 custom-scrollbar">
+          <!-- Kartu komentar diisi via JavaScript -->
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Footer Penyelenggara -->
+  <footer class="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs font-medium text-slate-500 pt-4 border-t border-slate-800/60">
+    <p>© 2026 Ikatan Da'i Indonesia (IKADI) Kota Tangerang. Semua Hak Dilindungi.</p>
+    <p class="flex items-center gap-1">
+      <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+      Monitor Berjalan Otomatis untuk Layar Proyektor
+    </p>
+  </footer>
+
+  <!-- ============================================================ -->
+  <!-- MODAL DETAIL KHOTIB                                          -->
+  <!-- ============================================================ -->
+  <div id="detailModal" class="hidden-modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+    <div id="detailModalPanel" class="bg-ikadi-card w-full max-w-lg rounded-3xl border border-slate-700 shadow-2xl overflow-hidden">
+      
+      <!-- Modal Header -->
+      <div class="relative bg-gradient-to-r from-emerald-900/60 via-slate-900 to-amber-900/40 p-6 border-b border-slate-700">
+        <button id="closeDetailModal" class="absolute top-4 right-4 w-9 h-9 bg-slate-800 hover:bg-red-900/50 text-slate-400 hover:text-red-400 rounded-xl flex items-center justify-center transition-all duration-150 cursor-pointer border border-slate-700 hover:border-red-800">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+        <div class="flex items-center space-x-4 pr-10">
+          <!-- Rank Badge -->
+          <div id="modalRankBadge" class="w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-extrabold shrink-0 bg-amber-500/20 text-amber-400 border border-amber-500/30">
+            <i class="fa-solid fa-crown"></i>
+          </div>
+          <div class="min-w-0">
+            <p class="text-xs font-bold text-emerald-400 uppercase tracking-widest mb-1" id="modalRankLabel">Peringkat #1</p>
+            <h2 class="text-lg sm:text-xl font-extrabold text-white leading-tight truncate" id="modalKhotibName">Nama Khotib</h2>
+            <p class="text-xs text-slate-400 mt-1 font-semibold" id="modalTotalPenilai">0 penilai</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 space-y-5 max-h-[70vh] overflow-y-auto custom-scrollbar">
+
+        <!-- Skor Gabungan -->
+        <div class="bg-slate-900/60 rounded-2xl p-4 border border-slate-800 flex items-center justify-between">
+          <div>
+            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Rata-Rata Gabungan</p>
+            <div class="flex items-baseline space-x-2">
+              <span class="text-4xl font-extrabold text-amber-400" id="modalAvgScore">0.00</span>
+              <span class="text-base font-bold text-slate-500">/ 5.00</span>
+            </div>
+            <p class="text-xs font-bold text-emerald-400 mt-1" id="modalRatingLabel">-</p>
+          </div>
+          <div class="text-right">
+            <div class="flex justify-end mb-1" id="modalStarDisplay">
+              <!-- Bintang diisi via JS -->
+            </div>
+            <p class="text-xs text-slate-500 font-semibold">Skor Keseluruhan</p>
+          </div>
+        </div>
+
+        <!-- Detail Tiap Dimensi -->
+        <div>
+          <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+            <i class="fa-solid fa-layer-group mr-2 text-emerald-500"></i>Rincian Per Dimensi
+          </p>
+          <div class="space-y-3">
+            
+            <!-- Daya Tarik Tema -->
+            <div class="bg-slate-900/40 rounded-xl p-3 border border-slate-800">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold text-emerald-300">Daya Tarik Tema</span>
+                <span class="text-sm font-extrabold text-white" id="modalDayaTarik">0.00</span>
+              </div>
+              <div class="w-full bg-slate-800 rounded-full h-2">
+                <div id="modalDayaTarikBar" class="h-2 rounded-full bg-gradient-to-r from-emerald-600 to-emerald-400 progress-bar-animate" style="--target-width: 0%; width: 0%;"></div>
+              </div>
+            </div>
+
+            <!-- Isi Khutbah -->
+            <div class="bg-slate-900/40 rounded-xl p-3 border border-slate-800">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold text-amber-300">Isi Khutbah</span>
+                <span class="text-sm font-extrabold text-white" id="modalIsi">0.00</span>
+              </div>
+              <div class="w-full bg-slate-800 rounded-full h-2">
+                <div id="modalIsiBar" class="h-2 rounded-full bg-gradient-to-r from-amber-600 to-amber-400 progress-bar-animate" style="--target-width: 0%; width: 0%;"></div>
+              </div>
+            </div>
+
+            <!-- Gaya Penyampaian -->
+            <div class="bg-slate-900/40 rounded-xl p-3 border border-slate-800">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold text-blue-300">Gaya Penyampaian</span>
+                <span class="text-sm font-extrabold text-white" id="modalGaya">0.00</span>
+              </div>
+              <div class="w-full bg-slate-800 rounded-full h-2">
+                <div id="modalGayaBar" class="h-2 rounded-full bg-gradient-to-r from-blue-600 to-blue-400 progress-bar-animate" style="--target-width: 0%; width: 0%;"></div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Saran / Masukan -->
+        <div id="modalKomentarSection">
+          <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+            <i class="fa-solid fa-lightbulb mr-2 text-amber-500"></i>Saran & Masukan Penilai
+          </p>
+          <div id="modalKomentarList" class="space-y-3">
+            <!-- Diisi via JS -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-6 py-4 border-t border-slate-800 bg-slate-900/50 flex items-center justify-between">
+        <p class="text-xs text-slate-500 font-medium">
+          <i class="fa-solid fa-circle-info mr-1 text-emerald-600"></i>
+          Data diperbarui otomatis setiap 5 detik
+        </p>
+        <button id="closeDetailModalBtn" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold rounded-xl transition-all duration-150 cursor-pointer">
+          Tutup
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT UTAMA DASHBOARD -->
+  <script>
+    // ==========================================
+    // CONFIG: Masukkan URL GAS Web App Anda di sini
+    // ==========================================
+    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxlk48pIfmV_Ofv7rLrq7In4-uOInjlwKKypWRd_p0vObWYLoVJan1jmzzT28l3Slcl/exec";
+
+    // Daftar Khotib (Harus persis sama dengan index.html)
+    const KHOTIB_LIST = [
+      "Abdul Cholil", "Ahmad Fatoni", "Ahmad Mujahid Annabawi", "Akmal Fadillah", "Amin Mumtaz", 
+      "Andi Hamkah Sultan Putra", "Andika Putra Pradana", "Asep Saepuloh", "Bayu Triatmaja", 
+      "Dadang Rohadia", "Dodi Dirmansyah", "Endang Hendarto", "Fajar Izzani", "Fashda' Bimaa Tu'mar", 
+      "Fauzi Said Toha", "Febri Iqhwan Danu", "Hasan Basri", "Hawaludin", "Ilham Maulana", 
+      "Irfan Zuhdi Salamy", "Ismatulloh", "M. Fadhilul Rohman", "Maman Abdul Rohman", "Marwanto", 
+      "Maulidiyyansah", "Miskar", "Mohammad Dava Abian Saputra", "Muhamad Rafli", 
+      "Muhamad Rasya Islami", "Muhammad Fahmi Anwar", "Muhammad Faris Ibrahim", 
+      "Muhammad Fathi Abdurrahman", "Muhammad Izzuddin Assulthan", "Muhammad Mu'in", 
+      "Muhasan Basri", "Nakula Bagus Julyanto", "Nasri Mubarak", "Panut Haryadi", 
+      "Rahmat Hidayatulloh (Panunggangan)", "Rahmat Hidayatulloh (Panunggangan 2)", 
+      "Rohidin Wakhid", "Ruslan", "Satrio Purnomo Hidayat", "Suhandi", "Sularman Manuri", 
+      "Sutria Dirga", "Wahyudin", "Wiwit Suprayogi", "Yadi Fitriyadi", "Yudik Sunarto"
+    ];
+
+    // Data Penilaian Global
+    let dbData = {};
+    let chartInstance = null;
+    let countdownTimer = 5;
+    let countdownIntervalId = null;
+    let topKhotibList = []; // Simpan urutan 5 besar untuk referensi modal
+
+    // Jalankan pertama kali saat dokumen siap
+    document.addEventListener("DOMContentLoaded", () => {
+      initChart();
+      initMockDataIfEmpty();
+
+      // Mengambil data pertama kali
+      fetchData();
+
+      // Mulai Timer Interval Auto-refresh 5 detik
+      startRefreshTimer();
+
+      // Tambahkan event listener untuk pilihan dropdown Khotib
+      document.getElementById("selectKhotib").addEventListener("change", () => {
+        renderKhotibStats();
+      });
+
+      // Setup modal detail
+      setupDetailModal();
+    });
+
+    // ==========================================
+    // MODAL DETAIL KHOTIB
+    // ==========================================
+    function setupDetailModal() {
+      const modal = document.getElementById("detailModal");
+      const closeBtn = document.getElementById("closeDetailModal");
+      const closeFooterBtn = document.getElementById("closeDetailModalBtn");
+
+      const closeModal = () => {
+        modal.classList.remove("visible-modal");
+        modal.classList.add("hidden-modal");
+      };
+
+      closeBtn.addEventListener("click", closeModal);
+      closeFooterBtn.addEventListener("click", closeModal);
+      
+      // Klik luar panel menutup modal
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) closeModal();
+      });
+
+      // Tekan Escape menutup modal
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeModal();
+      });
+    }
+
+    function openDetailModal(khotibName, rank) {
+      const kData = dbData[khotibName];
+      if (!kData) return;
+
+      const modal = document.getElementById("detailModal");
+      const avgScore = ((kData.avgDayaTarik + kData.avgIsi + kData.avgGayaPenyampaian) / 3);
+      const avgFixed = avgScore.toFixed(2);
+
+      // Rank Badge
+      const rankBadge = document.getElementById("modalRankBadge");
+      const rankLabel = document.getElementById("modalRankLabel");
+      if (rank === 1) {
+        rankBadge.className = "w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-extrabold shrink-0 bg-amber-500/20 text-amber-400 border border-amber-500/30";
+        rankBadge.innerHTML = '<i class="fa-solid fa-crown"></i>';
+        rankLabel.textContent = "Peringkat #1 — Terbaik";
+      } else if (rank === 2) {
+        rankBadge.className = "w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-extrabold shrink-0 bg-slate-300/20 text-slate-300 border border-slate-300/30";
+        rankBadge.innerHTML = `<span class="text-2xl font-black">#2</span>`;
+        rankLabel.textContent = "Peringkat #2";
+      } else if (rank === 3) {
+        rankBadge.className = "w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-extrabold shrink-0 bg-amber-700/20 text-amber-600 border border-amber-700/30";
+        rankBadge.innerHTML = `<span class="text-2xl font-black">#3</span>`;
+        rankLabel.textContent = "Peringkat #3";
+      } else {
+        rankBadge.className = "w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-extrabold shrink-0 bg-slate-800 text-slate-400 border border-slate-700";
+        rankBadge.innerHTML = `<span class="text-2xl font-black">#${rank}</span>`;
+        rankLabel.textContent = `Peringkat #${rank}`;
+      }
+
+      // Info Dasar
+      document.getElementById("modalKhotibName").textContent = khotibName;
+      document.getElementById("modalTotalPenilai").textContent = `${kData.totalPenilai} penilai`;
+      document.getElementById("modalAvgScore").textContent = avgFixed;
+      document.getElementById("modalRatingLabel").textContent = getRatingLabelText(avgFixed);
+
+      // Bintang Display
+      const starContainer = document.getElementById("modalStarDisplay");
+      starContainer.innerHTML = renderStarsHTML(avgScore);
+
+      // Progress Bar Dimensi
+      setModalDimensi("modalDayaTarik", "modalDayaTarikBar", kData.avgDayaTarik);
+      setModalDimensi("modalIsi", "modalIsiBar", kData.avgIsi);
+      setModalDimensi("modalGaya", "modalGayaBar", kData.avgGayaPenyampaian);
+
+      // Komentar / Saran
+      const komentarList = document.getElementById("modalKomentarList");
+      komentarList.innerHTML = "";
+
+      if (kData.komentar && kData.komentar.length > 0) {
+        kData.komentar.forEach(kom => {
+          const card = document.createElement("div");
+          card.className = "bg-slate-900/60 border border-slate-800 p-4 rounded-2xl";
+          card.innerHTML = `
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-emerald-400">
+                <i class="fa-solid fa-user-check mr-1.5 text-slate-500"></i>${kom.penilai || "Anonim"}
+              </span>
+              <span class="text-[10px] text-slate-500 font-semibold">
+                <i class="fa-regular fa-clock mr-1"></i>${kom.tanggal || "Baru saja"}
+              </span>
+            </div>
+            <p class="text-xs sm:text-sm text-slate-300 italic leading-relaxed">"${kom.isi}"</p>
+          `;
+          komentarList.appendChild(card);
+        });
+      } else {
+        komentarList.innerHTML = `
+          <div class="flex flex-col items-center justify-center py-8 text-slate-600">
+            <i class="fa-solid fa-comment-slash text-3xl mb-2 opacity-30"></i>
+            <p class="text-xs font-semibold uppercase tracking-wider">Belum Ada Saran</p>
+            <p class="text-[10px] mt-1 text-slate-600">Penilai belum memberikan komentar atau saran.</p>
+          </div>
+        `;
+      }
+
+      // Tampilkan modal
+      modal.classList.remove("hidden-modal");
+      modal.classList.add("visible-modal");
+    }
+
+    function setModalDimensi(textId, barId, value) {
+      document.getElementById(textId).textContent = Number(value).toFixed(2);
+      const bar = document.getElementById(barId);
+      const pct = Math.min(100, (value / 5) * 100).toFixed(1) + "%";
+      // Reset animasi
+      bar.style.width = "0%";
+      bar.style.setProperty("--target-width", pct);
+      // Re-trigger animasi
+      bar.classList.remove("progress-bar-animate");
+      void bar.offsetWidth; // reflow
+      bar.classList.add("progress-bar-animate");
+    }
+
+    function renderStarsHTML(score) {
+      let html = '<span class="flex items-center gap-0.5">';
+      for (let i = 1; i <= 5; i++) {
+        if (score >= i) {
+          html += '<i class="fa-solid fa-star text-amber-400 text-base"></i>';
+        } else if (score >= i - 0.5) {
+          html += '<i class="fa-solid fa-star-half-stroke text-amber-400 text-base"></i>';
+        } else {
+          html += '<i class="fa-regular fa-star text-slate-600 text-base"></i>';
+        }
+      }
+      html += '</span>';
+      return html;
+    }
+
+    // ==========================================
+    // DROPDOWN & DATA MANAGEMENT
+    // ==========================================
+
+    // Memperbarui opsi Dropdown secara dinamis hanya untuk khotib yang sudah dinilai
+    function updateDropdown() {
+      const select = document.getElementById("selectKhotib");
+      const currentSelected = select.value;
+      
+      // Mengumpulkan nama khotib yang memiliki ulasan/penilai
+      const activeKhotibs = [];
+      for (const name in dbData) {
+        if (dbData[name].totalPenilai > 0) {
+          activeKhotibs.push(name);
+        }
+      }
+      
+      // Urutkan nama khotib alfabetis
+      activeKhotibs.sort();
+      
+      select.innerHTML = "";
+      
+      if (activeKhotibs.length === 0) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "-- Belum Ada Data Penilaian --";
+        option.disabled = true;
+        option.selected = true;
+        select.appendChild(option);
+        return;
+      }
+      
+      activeKhotibs.forEach(name => {
+        const option = document.createElement("option");
+        option.value = name;
+        option.textContent = name;
+        select.appendChild(option);
+      });
+      
+      // Kembalikan ke pilihan sebelumnya jika masih ada dalam daftar aktif
+      if (currentSelected && activeKhotibs.includes(currentSelected)) {
+        select.value = currentSelected;
+      } else {
+        select.value = activeKhotibs[0];
+      }
+    }
+
+    // ==========================================
+    // CHART.JS
+    // ==========================================
+    function initChart() {
+      const ctx = document.getElementById('ratingChart').getContext('2d');
+      chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Daya Tarik Tema', 'Isi Khutbah', 'Gaya Penyampaian'],
+          datasets: [{
+            data: [0, 0, 0],
+            backgroundColor: [
+              'rgba(16, 185, 129, 0.85)',
+              'rgba(245, 158, 11, 0.85)',
+              'rgba(59, 130, 246, 0.85)'
+            ],
+            borderColor: [
+              '#10b981',
+              '#f59e0b',
+              '#3b82f6'
+            ],
+            borderWidth: 2,
+            borderRadius: 12,
+            borderSkipped: false,
+            barThickness: window.innerWidth > 640 ? 60 : 35
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              min: 0,
+              max: 5,
+              grid: {
+                color: 'rgba(255, 255, 255, 0.07)'
+              },
+              ticks: {
+                stepSize: 1,
+                color: '#94a3b8',
+                font: {
+                  family: 'Outfit',
+                  size: 13,
+                  weight: 'bold'
+                }
+              }
+            },
+            x: {
+              grid: {
+                display: false
+              },
+              ticks: {
+                color: '#e2e8f0',
+                font: {
+                  family: 'Outfit',
+                  size: 14,
+                  weight: '600'
+                }
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              backgroundColor: '#0f172a',
+              titleColor: '#e2e8f0',
+              bodyColor: '#34d399',
+              bodyFont: { family: 'Outfit', size: 14, weight: 'bold' },
+              titleFont: { family: 'Outfit', size: 13 },
+              padding: 12,
+              cornerRadius: 8,
+              borderWidth: 1,
+              borderColor: '#334155'
+            }
+          }
+        }
+      });
+    }
+
+    // ==========================================
+    // DATA FETCHING
+    // ==========================================
+    async function fetchData() {
+      const spinner = document.getElementById("refreshSpinner");
+      spinner.classList.add("animate-spin");
+
+      if (GAS_WEB_APP_URL.trim() === "") {
+        setSyncIndicator(false);
+        loadLocalData();
+      } else {
+        setSyncIndicator(true);
+        try {
+          const response = await fetch(GAS_WEB_APP_URL);
+          const result = await response.json();
+          if (result.status === "success") {
+            dbData = result.data || {};
+            updateDropdown();
+            renderKhotibStats();
+            renderTopKhotib();
+          } else {
+            console.error("Gagal memuat data dari GAS:", result.message);
+            loadLocalData();
+          }
+        } catch (error) {
+          console.error("Kesalahan jaringan saat mengambil data:", error);
+          loadLocalData();
+        }
+      }
+
+      setTimeout(() => {
+        spinner.classList.remove("animate-spin");
+      }, 600);
+    }
+
+    function setSyncIndicator(isLive) {
+      const dot = document.getElementById("syncIndicatorDot");
+      const text = document.getElementById("syncIndicatorText");
+      
+      if (isLive) {
+        dot.className = "w-3.5 h-3.5 rounded-full bg-emerald-500 pulse-indicator";
+        text.textContent = "Sinkron dengan Google Sheets";
+      } else {
+        dot.className = "w-3.5 h-3.5 rounded-full bg-amber-500 pulse-indicator";
+        text.textContent = "Mode Demo (Tersimpan Lokal)";
+      }
+    }
+
+    function loadLocalData() {
+      const rawLocal = localStorage.getItem("khotbah_ratings");
+      const submissions = rawLocal ? JSON.parse(rawLocal) : [];
+
+      const processed = {};
+      submissions.forEach(sub => {
+        const khotib = sub.Nama_Khotib;
+        if (!khotib) return;
+
+        if (!processed[khotib]) {
+          processed[khotib] = {
+            nama: khotib,
+            totalPenilai: 0,
+            sumDayaTarik: 0,
+            sumIsi: 0,
+            sumGayaPenyampaian: 0,
+            komentar: []
+          };
+        }
+
+        const g = processed[khotib];
+        g.totalPenilai += 1;
+        g.sumDayaTarik += Number(sub.Daya_Tarik) || 0;
+        g.sumIsi += Number(sub.Isi) || 0;
+        g.sumGayaPenyampaian += Number(sub.Gaya_Penyampaian) || 0;
+
+        if (sub.Komentar && sub.Komentar.trim() !== "") {
+          g.komentar.push({
+            penilai: sub.Nama_Penilai || "Anonim",
+            isi: sub.Komentar.trim(),
+            tanggal: sub.Timestamp ? formatDateString(sub.Timestamp) : "Baru saja"
+          });
+        }
+      });
+
+      dbData = {};
+      for (const k in processed) {
+        const p = processed[k];
+        dbData[k] = {
+          nama: p.nama,
+          totalPenilai: p.totalPenilai,
+          avgDayaTarik: Number((p.sumDayaTarik / p.totalPenilai).toFixed(2)),
+          avgIsi: Number((p.sumIsi / p.totalPenilai).toFixed(2)),
+          avgGayaPenyampaian: Number((p.sumGayaPenyampaian / p.totalPenilai).toFixed(2)),
+          komentar: p.komentar.reverse()
+        };
+      }
+ 
+      updateDropdown();
+      renderKhotibStats();
+      renderTopKhotib();
+    }
+
+    // ==========================================
+    // RENDER TOP 5 KHOTIB (dengan klik untuk detail)
+    // ==========================================
+    function renderTopKhotib() {
+      const container = document.getElementById("topKhotibContainer");
+      container.innerHTML = "";
+
+      const list = [];
+      for (const k in dbData) {
+        const kData = dbData[k];
+        if (kData.totalPenilai > 0) {
+          const score = Number(((kData.avgDayaTarik + kData.avgIsi + kData.avgGayaPenyampaian) / 3).toFixed(2));
+          list.push({
+            nama: kData.nama,
+            score: score,
+            totalPenilai: kData.totalPenilai
+          });
+        }
+      }
+
+      list.sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return b.totalPenilai - a.totalPenilai;
+      });
+
+      topKhotibList = list; // Simpan untuk referensi modal
+      const top5 = list.slice(0, 5);
+
+      if (top5.length > 0) {
+        top5.forEach((item, index) => {
+          const rank = index + 1;
+          let badgeClass = "bg-slate-800 text-slate-400 border border-slate-700";
+          let rankText = rank.toString();
+          
+          if (rank === 1) {
+            badgeClass = "bg-amber-500/20 text-amber-400 border border-amber-500/30";
+            rankText = '<i class="fa-solid fa-crown text-amber-500"></i>';
+          } else if (rank === 2) {
+            badgeClass = "bg-slate-300/20 text-slate-300 border border-slate-300/30";
+          } else if (rank === 3) {
+            badgeClass = "bg-amber-700/20 text-amber-600 border border-amber-700/30";
+          }
+
+          const row = document.createElement("div");
+          row.className = "group flex items-center justify-between p-2.5 rounded-xl bg-slate-900/30 border border-slate-800/40 hover:border-emerald-500/60 hover:bg-emerald-950/20 active:scale-[0.98] transition-all duration-150 cursor-pointer";
+          row.innerHTML = `
+            <div class="flex items-center space-x-3 min-w-0">
+              <div class="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${badgeClass}">
+                ${rankText}
+              </div>
+              <div class="min-w-0 flex-grow">
+                <span class="block text-sm font-bold text-slate-200 truncate">${item.nama}</span>
+                <span class="block text-[10px] text-slate-500 font-semibold">${item.totalPenilai} penilai</span>
+              </div>
+            </div>
+            <div class="flex items-center space-x-2 shrink-0 pl-2">
+              <div class="flex items-center space-x-1.5">
+                <span class="text-sm font-bold text-amber-400">${item.score.toFixed(2)}</span>
+                <i class="fa-solid fa-star text-xs text-amber-400"></i>
+              </div>
+              <div class="w-6 h-6 bg-emerald-900/40 group-hover:bg-emerald-600 text-emerald-500 group-hover:text-white rounded-lg flex items-center justify-center transition-all duration-150">
+                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+              </div>
+            </div>
+          `;
+          
+          // Handler klik membuka modal DETAIL
+          row.addEventListener("click", () => {
+            openDetailModal(item.nama, rank);
+          });
+          
+          container.appendChild(row);
+        });
+      } else {
+        container.innerHTML = `
+          <div class="flex flex-col items-center justify-center py-10 text-slate-600">
+            <i class="fa-solid fa-trophy text-4xl mb-2 opacity-20"></i>
+            <p class="text-xs font-semibold uppercase tracking-wider">Belum Ada Penilaian</p>
+            <p class="text-[10px] text-slate-600 mt-1">Data terbaik akan tampil setelah ada suara masuk.</p>
+          </div>
+        `;
+      }
+    }
+
+    // ==========================================
+    // RENDER STATISTIK KHOTIB YANG DIPILIH
+    // ==========================================
+    function renderKhotibStats() {
+      const selectedKhotib = document.getElementById("selectKhotib").value;
+      const totalPenilaiSpan = document.getElementById("totalEvaluations");
+      const averageScoreSpan = document.getElementById("averageScore");
+      const ratingLabel = document.getElementById("ratingLabel");
+      const commentsContainer = document.getElementById("commentsContainer");
+      const commentsCount = document.getElementById("commentsCount");
+
+      const kData = dbData[selectedKhotib];
+
+      if (kData && kData.totalPenilai > 0) {
+        totalPenilaiSpan.textContent = kData.totalPenilai;
+        
+        const totalAvg = ((kData.avgDayaTarik + kData.avgIsi + kData.avgGayaPenyampaian) / 3).toFixed(2);
+        averageScoreSpan.textContent = totalAvg;
+        ratingLabel.textContent = getRatingLabelText(totalAvg);
+        ratingLabel.className = "text-xs font-bold text-emerald-400 mt-1 block";
+
+        chartInstance.data.datasets[0].data = [kData.avgDayaTarik, kData.avgIsi, kData.avgGayaPenyampaian];
+        chartInstance.update();
+
+        commentsContainer.innerHTML = "";
+        commentsCount.textContent = kData.komentar.length;
+
+        if (kData.komentar.length > 0) {
+          kData.komentar.forEach(kom => {
+            const card = document.createElement("div");
+            card.className = "bg-slate-900/50 border border-slate-800/60 p-4 rounded-2xl shadow-sm hover:border-emerald-500/30 transition-all duration-200";
+            card.innerHTML = `
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-bold text-emerald-400"><i class="fa-solid fa-user-check mr-1.5 text-slate-500"></i>${kom.penilai}</span>
+                <span class="text-[10px] text-slate-500 font-semibold"><i class="fa-regular fa-clock mr-1"></i>${kom.tanggal}</span>
+              </div>
+              <p class="text-xs sm:text-sm text-slate-300 italic leading-relaxed">"${kom.isi}"</p>
+            `;
+            commentsContainer.appendChild(card);
+          });
+        } else {
+          showNoCommentsPlaceholder();
+        }
+
+      } else {
+        totalPenilaiSpan.textContent = "0";
+        averageScoreSpan.textContent = "0.00";
+        ratingLabel.textContent = "Belum Ada Penilaian";
+        ratingLabel.className = "text-xs text-slate-500 mt-1 block";
+
+        chartInstance.data.datasets[0].data = [0, 0, 0];
+        chartInstance.update();
+
+        commentsContainer.innerHTML = "";
+        commentsCount.textContent = "0";
+        showNoCommentsPlaceholder();
+      }
+    }
+
+    function getRatingLabelText(score) {
+      const s = Number(score);
+      if (s >= 4.5) return "Sangat Memuaskan (Istimewa)";
+      if (s >= 3.8) return "Sangat Baik (Jayyid Jiddan)";
+      if (s >= 3.0) return "Cukup Baik (Jayyid)";
+      if (s >= 2.0) return "Cukup (Maqbul)";
+      return "Perlu Pembinaan";
+    }
+
+    function showNoCommentsPlaceholder() {
+      const container = document.getElementById("commentsContainer");
+      container.innerHTML = `
+        <div class="flex flex-col items-center justify-center py-10 text-slate-600">
+          <i class="fa-solid fa-comment-slash text-4xl mb-3 opacity-30"></i>
+          <p class="text-xs font-semibold uppercase tracking-wider">Belum ada saran masuk</p>
+          <p class="text-[10px] mt-1 text-slate-600">Saran yang dikirim penilai akan muncul di sini.</p>
+        </div>
+      `;
+    }
+
+    // ==========================================
+    // TIMER AUTO REFRESH
+    // ==========================================
+    function startRefreshTimer() {
+      const countdownSpan = document.getElementById("timerCountdown");
+      
+      countdownIntervalId = setInterval(() => {
+        countdownTimer--;
+        
+        if (countdownTimer <= 0) {
+          countdownTimer = 5;
+          fetchData();
+        }
+        
+        countdownSpan.textContent = countdownTimer + "s";
+      }, 1000);
+    }
+
+    // ==========================================
+    // UTILITIES
+    // ==========================================
+    function formatDateString(isoString) {
+      try {
+        const d = new Date(isoString);
+        const pad = (n) => n < 10 ? '0' + n : n;
+        const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+        
+        const date = pad(d.getDate());
+        const month = months[d.getMonth()];
+        const year = d.getFullYear();
+        const hour = pad(d.getHours());
+        const min = pad(d.getMinutes());
+        
+        return `${date} ${month} ${year} ${hour}:${min}`;
+      } catch (e) {
+        return "Baru saja";
+      }
+    }
+
+    // ==========================================
+    // MOCK DATA (untuk pengujian lokal)
+    // ==========================================
+    function initMockDataIfEmpty() {
+      const dataKey = "khotbah_ratings";
+      if (!localStorage.getItem(dataKey)) {
+        const initialMock = [
+          {
+            Nama_Penilai: "M. Hidayat",
+            Nama_Khotib: "Abdul Cholil",
+            Daya_Tarik: 4,
+            Isi: 5,
+            Gaya_Penyampaian: 4,
+            Komentar: "Materi khutbah terstruktur dengan sangat baik, referensi dalil hadits akurat.",
+            Timestamp: new Date(Date.now() - 3600000 * 2).toISOString()
+          },
+          {
+            Nama_Penilai: "H. Syukur",
+            Nama_Khotib: "Abdul Cholil",
+            Daya_Tarik: 5,
+            Isi: 4,
+            Gaya_Penyampaian: 5,
+            Komentar: "Intonasi dan suara sangat jelas terdengar di seluruh sudut masjid.",
+            Timestamp: new Date(Date.now() - 3600000).toISOString()
+          },
+          {
+            Nama_Penilai: "Ahmad Ridwan",
+            Nama_Khotib: "Ahmad Fatoni",
+            Daya_Tarik: 4,
+            Isi: 4,
+            Gaya_Penyampaian: 3,
+            Komentar: "Materi sangat bagus, namun waktu khutbah agak sedikit lewat batas maksimal.",
+            Timestamp: new Date(Date.now() - 1800000).toISOString()
+          },
+          {
+            Nama_Penilai: "Sutrisno",
+            Nama_Khotib: "Asep Saepuloh",
+            Daya_Tarik: 5,
+            Isi: 5,
+            Gaya_Penyampaian: 5,
+            Komentar: "Luar biasa, sangat memotivasi jamaah untuk beramal shaleh.",
+            Timestamp: new Date(Date.now() - 600000).toISOString()
+          },
+          {
+            Nama_Penilai: "Zainal Arifin",
+            Nama_Khotib: "Asep Saepuloh",
+            Daya_Tarik: 4,
+            Isi: 5,
+            Gaya_Penyampaian: 5,
+            Komentar: "",
+            Timestamp: new Date(Date.now() - 300000).toISOString()
+          },
+          {
+            Nama_Penilai: "Budi Santoso",
+            Nama_Khotib: "Hasan Basri",
+            Daya_Tarik: 4,
+            Isi: 4,
+            Gaya_Penyampaian: 4,
+            Komentar: "Perlu ditingkatkan penggunaan ayat Al-Quran yang relevan.",
+            Timestamp: new Date(Date.now() - 900000).toISOString()
+          },
+          {
+            Nama_Penilai: "M. Ridwan",
+            Nama_Khotib: "Bayu Triatmaja",
+            Daya_Tarik: 5,
+            Isi: 4,
+            Gaya_Penyampaian: 3,
+            Komentar: "Tema sangat menarik dan relevan dengan kondisi umat saat ini.",
+            Timestamp: new Date(Date.now() - 1200000).toISOString()
+          }
+        ];
+        localStorage.setItem(dataKey, JSON.stringify(initialMock));
+      }
+    }
+  </script>
+</body>
+</html>
